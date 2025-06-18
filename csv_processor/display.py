@@ -1,5 +1,7 @@
-from typing import List, Dict
+from typing import Dict, List
+
 from tabulate import tabulate
+
 
 def print_table(data: List[Dict[str, str]]) -> None:
     if not data:

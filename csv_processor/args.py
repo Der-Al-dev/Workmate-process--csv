@@ -1,6 +1,7 @@
 import argparse
 from typing import Optional
 
+
 class Arguments(argparse.Namespace):
     file: str
     where: Optional[str]

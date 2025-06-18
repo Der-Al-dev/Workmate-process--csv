@@ -1,18 +1,12 @@
-from typing import Dict, Callable, Any
+from typing import Any, Callable, Dict
 
 FILTER_OP: Dict[str, Callable[[Any, Any], bool]] = {
-    '!=': lambda a, b: a != b,
-    '>=': lambda a, b: a >= b,
-    '<=': lambda a, b: a <= b,
-    '>': lambda a, b: a > b,
-    '<': lambda a, b: a < b,
-    '=': lambda a, b: a == b
+    "!=": lambda a, b: a != b,
+    ">=": lambda a, b: a >= b,
+    "<=": lambda a, b: a <= b,
+    ">": lambda a, b: a > b,
+    "<": lambda a, b: a < b,
+    "=": lambda a, b: a == b,
 }
 
-AGGREGATE_OP = {
-    'min',
-    'max',
-    'sum',
-    'avg',
-    'count'
-}
+AGGREGATE_OP = {"min", "max", "sum", "avg", "count"}
