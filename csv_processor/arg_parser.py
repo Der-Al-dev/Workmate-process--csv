@@ -1,73 +1,67 @@
 import argparse
 import re
 
-from .args import Arguments
-from .operations import AGGREGATE_OP, FILTER_OP
+from .args import COMBINED_ARGS_CONFIG, ArgParseConfig, Arguments
 
 
 def parse_args() -> Arguments:
     arguments = argparse.ArgumentParser()
 
-    arguments.add_argument(
-        "-f", "--file",
-        dest="file",
-        type=str,
-        required=True,
-        help="Путь к файлу"
-    )
-    arguments.add_argument(
-        "--where",
-        dest="where",
-        type=str,
-        required=False,
-        help="""Условие фильтрации,
-        например: price<1000, rating=4.5, name=iphone""",
-    )
-    arguments.add_argument(
-        "--aggregate",
-        dest="aggregate",
-        type=str,
-        required=False,
-        help="Условие агрегации, например: rating=min",
-    )
+    for config in COMBINED_ARGS_CONFIG:
+        arguments.add_argument(
+            *config["flags"],
+            dest=config["dest"],
+            type=str,
+            required=config["required"],
+            help=config["help"],
+        )
 
     args = arguments.parse_args(namespace=Arguments())
-    if_arg_where(args)
-    if_arg_aggregate(args)
+
+    for config in COMBINED_ARGS_CONFIG:
+        parse_config = config.get("parse_config")
+        if parse_config:
+            parse_argument(args, parse_config)
+
     return args
 
 
-def if_arg_where(args: Arguments) -> None:
-    if args.where:
-        pattern = (
-            r"^([\w\s]+)\s*("
-            + "|".join(map(re.escape, FILTER_OP.keys()))
-            + r")\s*(.+)$"
+def parse_argument(args: Arguments, config: ArgParseConfig) -> None:
+    value = getattr(args, config.arg_name, None)
+    if not value:
+        for attr in config.attr_names.values():
+            if attr:
+                setattr(args, attr, None)
+        return
+
+    pattern = config.pattern_template.format(
+        operators="|".join(map(re.escape, config.operators))
+    )
+    flags = re.IGNORECASE if config.ignore_case else 0
+    match = re.match(pattern, value.strip(), flags)
+    if not match:
+        raise ValueError(
+            config.error_message
+            or f"Неверный формат аргумента '{config.arg_name}': {value}"
         )
-        match = re.match(pattern, args.where)
-        if not match:
-            raise ValueError(f"Неверный формат фильтрации: {args.where}")
-        args.filter_column = match.group(1).strip()
-        args.filter_op = match.group(2)
-        args.filter_value = match.group(3).strip()
-    else:
-        args.filter_column = args.filter_op = args.filter_value = None
 
-
-def if_arg_aggregate(args: Arguments) -> None:
-    if args.aggregate:
-        pattern = r"^([\w\s]+)\s*=\s*(\w+)$"
-        match = re.match(pattern, args.aggregate)
-        if not match:
-            raise ValueError(f"Неверный формат агрегации: {args.aggregate}")
-
-        column = match.group(1).strip()
-        operation = match.group(2).strip().lower()
-
-        if operation not in AGGREGATE_OP:
-            raise ValueError(f"Неизвестная операция агрегации: {operation}")
-
-        args.aggregate_column = column
-        args.aggregate_op = operation
-    else:
-        args.aggregate_column = args.aggregate_op = None
+    if "column" in config.attr_names and config.attr_names["column"]:
+        setattr(args, config.attr_names["column"], match.group(1).strip())
+    if "op" in config.attr_names and config.attr_names["op"]:
+        op_value = match.group(2).strip().lower()
+        if op_value not in config.operators:
+            raise ValueError(
+                f"Неизвестная операция в аргументе '{config.arg_name}': "
+                f"{op_value}"
+            )
+        setattr(args, config.attr_names["op"], op_value)
+    if "value" in config.attr_names and config.attr_names["value"]:
+        setattr(
+            args,
+            config.attr_names["value"],
+            (
+                match.group(3).strip()
+                if match.lastindex and match.lastindex >= 3
+                else None
+            ),
+        )

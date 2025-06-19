@@ -1,7 +1,5 @@
 import sys
 
-import pytest
-
 from csv_processor.arg_parser import parse_args
 
 

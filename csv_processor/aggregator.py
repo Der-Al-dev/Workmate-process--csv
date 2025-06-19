@@ -2,6 +2,7 @@ from typing import Dict, List
 
 from .args import Arguments
 from .filter import convert
+from .operations import AGGREGATE_OP
 
 
 def is_aggregate(args: Arguments) -> bool:
@@ -15,22 +16,24 @@ def apply_aggregation(
     data: List[Dict[str, str]], args: Arguments
 ) -> List[Dict[str, str]]:
     result = 0.0
+    check = 0
     values = process_value(data, args)
 
-    if args.aggregate_op == "sum":
-        result = sum(values)
-    elif args.aggregate_op == "min":
-        result = min(values)
-    elif args.aggregate_op == "max":
-        result = max(values)
-    elif args.aggregate_op == "avg":
-        result = sum(values) / len(values)
-    elif args.aggregate_op == "count":
-        result = len(values)
-    else:
+    if args.aggregate_op is None:
+        raise ValueError("Не указана операция агрегации")
+
+    operation = AGGREGATE_OP.get(args.aggregate_op)
+
+    for op in AGGREGATE_OP:
+        if (args.aggregate_op, op) and operation:
+            result = operation(values)
+            check = 1
+            break
+    if not check:
         raise ValueError(
             f"Неизвестная операция агрегации: {args.aggregate_op}"
         )
+
     aggregated_data = [
         {f"{args.aggregate_op}({args.aggregate_column})": str(result)}
     ]

@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 
-from .arg_parser import FILTER_OP, Arguments
+from .args import FILTER_OP, Arguments
 
 
 def is_filter(args: Arguments) -> bool:
